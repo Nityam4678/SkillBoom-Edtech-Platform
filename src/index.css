@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@keyframes gold-drift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gold {
+  background-size: 200% 200%;
+  animation: gold-drift 22s ease-in-out infinite;
+}
+
+/* Golden Obsidian Mesh */
+.bg-mesh-obsidian {
+  background-color: #050505; /* True Black */
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(225, 29, 72, 0.08) 0px, transparent 40%), /* Rose */
+    radial-gradient(at 90% 10%, rgba(245, 158, 11, 0.1) 0px, transparent 40%),  /* Amber */
+    radial-gradient(at 50% 50%, rgba(124, 58, 237, 0.05) 0px, transparent 50%), /* Subtle Violet */
+    radial-gradient(at 20% 80%, rgba(234, 88, 12, 0.08) 0px, transparent 40%); /* Orange */
+}
