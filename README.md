@@ -2,8 +2,6 @@
 SkillBoom – EdTech Platform
 ==================================================
 
-🚀 Website Link: https://skillboom-frontend.vercel.app/
-
 ![Main Page](images/mainpage.png)
 
 SkillBoom is a fully functional EdTech platform that allows users to create, consume, and rate educational content.  
