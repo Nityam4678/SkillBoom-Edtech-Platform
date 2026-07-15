@@ -1,8 +1,5 @@
-==================================================
 SkillBoom – EdTech Platform
 ==================================================
-
-🚀 Website Link: https://skillboom-frontend.vercel.app/
 
 ![Main Page](images/mainpage.png)
 
