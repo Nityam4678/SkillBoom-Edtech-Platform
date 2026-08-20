@@ -58,6 +58,11 @@ const userSchema = new mongoose.Schema(
 		resetPasswordExpires: {
 			type: Date,
 		},
+		resetPasswordTokenHash: {
+			type: String,
+			index: true,
+			select: false,
+		},
 		image: {
 			type: String,
 			required: true,
@@ -73,6 +78,8 @@ const userSchema = new mongoose.Schema(
 	},
 	{ timestamps: true }
 );
+
+userSchema.index({ email: 1 }, { unique: true });
 
 // Export the Mongoose model for the user schema, using the name "user"
 module.exports = mongoose.model("user", userSchema);

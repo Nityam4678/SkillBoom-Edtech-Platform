@@ -5,6 +5,7 @@ const SubSection = require("../models/SubSection")
 const User = require("../models/User")
 const { uploadImageToCloudinary } = require("../utils/imageUploader")
 const CourseProgress = require("../models/CourseProgress")
+const mongoose = require("mongoose")
 const { convertSecondsToDuration } = require("../utils/secToDuration")
 // Function to create a new course
 exports.createCourse = async (req, res) => {
@@ -50,8 +51,10 @@ exports.createCourse = async (req, res) => {
       status = "Draft"
     }
     // Check if the user is an instructor
-    const instructorDetails = await User.findById(userId, {
+    const instructorDetails = await User.findOne({
+      _id: userId,
       accountType: "Instructor",
+      approved: true,
     })
 
     if (!instructorDetails) {
@@ -111,7 +114,7 @@ exports.createCourse = async (req, res) => {
       { new: true }
     )
     // Return the new course and a success message
-    res.status(200).json({
+    res.status(201).json({
       success: true,
       data: newCourse,
       message: "Course Created Successfully",
@@ -122,7 +125,7 @@ exports.createCourse = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to create course",
-      error: error.message,
+      message: "Failed to create course",
     })
   }
 }
@@ -130,15 +133,21 @@ exports.createCourse = async (req, res) => {
 exports.editCourse = async (req, res) => {
   try {
     const { courseId } = req.body
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(404).json({ success: false, message: "Course not found" })
+    }
     const updates = req.body
-    const course = await Course.findById(courseId)
+    const course = await Course.findOne({
+      _id: courseId,
+      instructor: req.user.id,
+    })
 
     if (!course) {
-      return res.status(404).json({ error: "Course not found" })
+      return res.status(404).json({ success: false, message: "Course not found" })
     }
 
     // If Thumbnail Image is found, update it
-    if (req.files) {
+    if (req.files && req.files.thumbnailImage) {
       const thumbnail = req.files.thumbnailImage
       const thumbnailImage = await uploadImageToCloudinary(
         thumbnail,
@@ -147,9 +156,18 @@ exports.editCourse = async (req, res) => {
       course.thumbnail = thumbnailImage.secure_url
     }
 
-    // Update only the fields that are present in the request body
-    for (const key in updates) {
-      if (updates.hasOwnProperty(key)) {
+    const editableFields = [
+      "courseName",
+      "courseDescription",
+      "whatYouWillLearn",
+      "price",
+      "tag",
+      "category",
+      "status",
+      "instructions",
+    ]
+    for (const key of editableFields) {
+      if (updates[key] !== undefined) {
         if (key === "tag" || key === "instructions") {
           course[key] = JSON.parse(updates[key])
         } else {
@@ -189,36 +207,58 @@ exports.editCourse = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error.message,
+      message: "Internal server error",
     })
   }
 }
 // Get Course List
 exports.getAllCourses = async (req, res) => {
   try {
-    const allCourses = await Course.find(
-      { status: "Published" },
-      {
-        courseName: true,
-        price: true,
-        thumbnail: true,
-        instructor: true,
-        ratingAndReviews: true,
-        studentsEnrolled: true,
-      }
-    )
-      .populate("instructor")
-      .exec()
+    const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
+    const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 10, 1), 50)
+    const skip = (page - 1) * limit
+    const filter = { status: "Published" }
+    if (req.query.category && mongoose.Types.ObjectId.isValid(req.query.category)) {
+      filter.category = req.query.category
+    }
+    if (req.query.search && req.query.search.trim()) {
+      filter.courseName = { $regex: req.query.search.trim(), $options: "i" }
+    }
+
+    const [allCourses, total] = await Promise.all([
+      Course.find(
+        filter,
+        {
+          courseName: true,
+          price: true,
+          thumbnail: true,
+          instructor: true,
+          ratingAndReviews: true,
+          studentsEnrolled: true,
+        }
+      )
+        .populate("instructor")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      Course.countDocuments(filter),
+    ])
 
     return res.status(200).json({
       success: true,
       data: allCourses,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     })
   } catch (error) {
-    return res.status(404).json({
+    return res.status(500).json({
       success: false,
-      message: `Can't Fetch Course Data`,
-      error: error.message,
+      message: "Could not fetch courses",
     })
   }
 }
@@ -277,6 +317,9 @@ exports.getAllCourses = async (req, res) => {
 exports.getCourseDetails = async (req, res) => {
   try {
     const { courseId } = req.body
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(404).json({ success: false, message: "Course not found" })
+    }
     const courseDetails = await Course.findOne({
       _id: courseId,
     })
@@ -298,9 +341,9 @@ exports.getCourseDetails = async (req, res) => {
       .exec()
 
     if (!courseDetails) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
-        message: `Could not find course with id: ${courseId}`,
+        message: "Course not found",
       })
     }
 
@@ -331,16 +374,20 @@ exports.getCourseDetails = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Could not fetch course details",
     })
   }
 }
 exports.getFullCourseDetails = async (req, res) => {
   try {
     const { courseId } = req.body
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(404).json({ success: false, message: "Course not found" })
+    }
     const userId = req.user.id
     const courseDetails = await Course.findOne({
       _id: courseId,
+      $or: [{ studentsEnrolled: userId }, { instructor: userId }],
     })
       .populate({
         path: "instructor",
@@ -364,9 +411,9 @@ exports.getFullCourseDetails = async (req, res) => {
     })
 
     if (!courseDetails) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
-        message: `Could not find course with id: ${courseId}`,
+        message: "Course not found",
       })
     }
 
@@ -393,14 +440,14 @@ exports.getFullCourseDetails = async (req, res) => {
         courseDetails,
         totalDuration,
         completedVideos: courseProgressCount?.completedVideos
-          ? courseProgressCount?.completedVideos
+          ? courseProgressCount.completedVideos
           : [],
       },
     })
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Could not fetch course content",
     })
   }
 }
@@ -408,25 +455,36 @@ exports.getFullCourseDetails = async (req, res) => {
 // Get a list of Course for a given Instructor
 exports.getInstructorCourses = async (req, res) => {
   try {
-    // Get the instructor ID from the authenticated user or request body
     const instructorId = req.user.id
+    const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
+    const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 10, 1), 50)
+    const skip = (page - 1) * limit
 
-    // Find all courses belonging to the instructor
-    const instructorCourses = await Course.find({
-      instructor: instructorId,
-    }).sort({ createdAt: -1 })
+    const [instructorCourses, total] = await Promise.all([
+      Course.find({ instructor: instructorId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Course.countDocuments({ instructor: instructorId }),
+    ])
 
     // Return the instructor's courses
     res.status(200).json({
       success: true,
       data: instructorCourses,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     })
   } catch (error) {
     console.error(error)
     res.status(500).json({
       success: false,
       message: "Failed to retrieve instructor courses",
-      error: error.message,
+      message: "Failed to retrieve instructor courses",
     })
   }
 }
@@ -434,15 +492,21 @@ exports.getInstructorCourses = async (req, res) => {
 exports.deleteCourse = async (req, res) => {
   try {
     const { courseId } = req.body
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(404).json({ message: "Course not found" })
+    }
 
     // Find the course
-    const course = await Course.findById(courseId)
+    const course = await Course.findOne({
+      _id: courseId,
+      instructor: req.user.id,
+    })
     if (!course) {
       return res.status(404).json({ message: "Course not found" })
     }
 
     // Unenroll students from the course
-    const studentsEnrolled = course.studentsEnroled
+    const studentsEnrolled = course.studentsEnrolled
     for (const studentId of studentsEnrolled) {
       await User.findByIdAndUpdate(studentId, {
         $pull: { courses: courseId },
@@ -477,7 +541,7 @@ exports.deleteCourse = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error",
-      error: error.message,
+      message: "Server error",
     })
   }
 }

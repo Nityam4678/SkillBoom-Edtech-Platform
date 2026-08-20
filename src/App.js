@@ -1,5 +1,6 @@
+import React from "react";
 import "./App.css";
-import {Route, Routes, useNavigate } from "react-router-dom";
+import {Route, Routes } from "react-router-dom";
 import Home from "./pages/Home"
 import Navbar from "./components/common/Navbar"
 import OpenRoute from "./components/core/Auth/OpenRoute"
@@ -28,13 +29,17 @@ import CourseDetails from "./pages/CourseDetails";
 import ViewCourse from "./pages/ViewCourse";
 import VideoDetails from "./components/core/ViewCourse/VideoDetails";
 import Instructor from "./components/core/Dashboard/InstructorDashboard/Instructor";
+import { configureSessionExpiry, refreshSession } from "./services/operations/authAPI";
 
 function App() {
 
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-  
   const { user } = useSelector((state) => state.profile)
+
+  React.useEffect(() => {
+    configureSessionExpiry(dispatch)
+    dispatch(refreshSession())
+  }, [dispatch])
 
 
   return (

@@ -9,23 +9,34 @@ const {
 } = require("../mail/templates/courseEnrollmentEmail")
 const { paymentSuccessEmail } = require("../mail/templates/paymentSuccessEmail")
 const CourseProgress = require("../models/CourseProgress")
+const PaymentOrder = require("../models/PaymentOrder")
 
 // Capture the payment and initiate the Razorpay order
 exports.capturePayment = async (req, res) => {
   const { courses } = req.body
   const userId = req.user.id
 
-  if (!courses || courses.length === 0) {
+  if (!Array.isArray(courses) || courses.length === 0) {
     return res.status(400).json({
       success: false,
       message: "Please provide course IDs",
     })
   }
 
+  const courseIds = [...new Set(courses.map((courseId) => String(courseId)))]
   let total_amount = 0
   try {
-    for (const course_id of courses) {
-      const course = await Course.findById(course_id)
+    for (const course_id of courseIds) {
+      if (!mongoose.Types.ObjectId.isValid(course_id)) {
+        return res.status(404).json({
+          success: false,
+          message: "Course not found",
+        })
+      }
+      const course = await Course.findOne({
+        _id: course_id,
+        status: "Published",
+      })
       if (!course) {
         return res.status(404).json({
           success: false,
@@ -47,20 +58,31 @@ exports.capturePayment = async (req, res) => {
       total_amount += course.price
     }
 
+    const amount = total_amount * 100
     const options = {
-      amount: total_amount * 100,
+      amount,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
+      notes: {
+        userId: String(userId),
+        courses: courseIds.join(","),
+      },
     }
 
     const paymentResponse = await instance.orders.create(options)
+    await PaymentOrder.create({
+      orderId: paymentResponse.id,
+      user: userId,
+      courses: courseIds,
+      amount,
+      currency: "INR",
+    })
     return res.status(200).json({
       success: true,
       data: paymentResponse,
     })
 
   } catch (error) {
-    console.error(error)
     return res.status(500).json({
       success: false,
       message: "Could not initiate payment",
@@ -85,7 +107,7 @@ exports.verifyPayment = async (req, res) => {
       !razorpay_order_id ||
       !razorpay_payment_id ||
       !razorpay_signature ||
-      !courses ||
+      !Array.isArray(courses) ||
       !userId
     ) {
       return res.status(400).json({
@@ -101,25 +123,99 @@ exports.verifyPayment = async (req, res) => {
       .update(body)
       .digest("hex")
 
-    if (expectedSignature !== razorpay_signature) {
+    const expectedSignatureBuffer = Buffer.from(expectedSignature, "hex")
+    const receivedSignatureBuffer = Buffer.from(razorpay_signature, "hex")
+    if (
+      expectedSignatureBuffer.length !== receivedSignatureBuffer.length ||
+      !crypto.timingSafeEqual(expectedSignatureBuffer, receivedSignatureBuffer)
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid signature",
       })
     }
 
-    await enrollStudents(courses, userId)
+    const paymentOrder = await PaymentOrder.findOne({
+      orderId: razorpay_order_id,
+      user: userId,
+    })
+    if (!paymentOrder) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment order not found",
+      })
+    }
+
+    const requestedCourses = [...new Set(courses.map((courseId) => String(courseId)))].sort()
+    const orderedCourses = paymentOrder.courses.map((courseId) => String(courseId)).sort()
+    if (
+      requestedCourses.length !== orderedCourses.length ||
+      requestedCourses.some((courseId, index) => courseId !== orderedCourses[index])
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Payment does not match this order",
+      })
+    }
+
+    if (paymentOrder.status === "Paid") {
+      if (paymentOrder.paymentId !== razorpay_payment_id) {
+        return res.status(409).json({
+          success: false,
+          message: "Payment order was already verified",
+        })
+      }
+      return res.status(200).json({
+        success: true,
+        message: "Payment already verified & courses enrolled",
+      })
+    }
+
+    const order = await instance.orders.fetch(razorpay_order_id)
+    if (
+      order.id !== paymentOrder.orderId ||
+      order.amount !== paymentOrder.amount ||
+      order.currency !== paymentOrder.currency ||
+      requestedCourses.length !== orderedCourses.length ||
+      requestedCourses.some((courseId, index) => courseId !== orderedCourses[index])
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Payment does not match this order",
+      })
+    }
+
+    const payment = await instance.payments.fetch(razorpay_payment_id)
+    if (
+      payment.order_id !== paymentOrder.orderId ||
+      payment.amount !== paymentOrder.amount ||
+      payment.currency !== paymentOrder.currency ||
+      payment.status !== "captured"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment was not captured",
+      })
+    }
+
+    await enrollStudents(orderedCourses, userId)
+    await PaymentOrder.findOneAndUpdate(
+      { _id: paymentOrder._id, status: "Pending" },
+      {
+        status: "Paid",
+        paymentId: razorpay_payment_id,
+        verifiedAt: new Date(),
+      }
+    )
 
     return res.status(200).json({
       success: true,
       message: "Payment verified & courses enrolled",
     })
   } catch (error) {
-    console.error("verifyPayment error:", error)
-
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Could not verify payment",
     })
   }
 }
@@ -128,24 +224,37 @@ exports.verifyPayment = async (req, res) => {
 // Send Payment Success Email
 exports.sendPaymentSuccessEmail = async (req, res) => {
   try {
-    const { orderId, paymentId, amount } = req.body
+    const { orderId, paymentId } = req.body
     const userId = req.user.id
 
-    if (!orderId || !paymentId || !amount || !userId) {
+    if (!orderId || !paymentId || !userId) {
       return res.status(400).json({
         success: false,
         message: "Missing payment details",
       })
     }
 
-    const enrolledStudent = await User.findById(userId)
+    const paymentOrder = await PaymentOrder.findOne({
+      orderId,
+      paymentId,
+      user: userId,
+      status: "Paid",
+    })
+    if (!paymentOrder) {
+      return res.status(404).json({
+        success: false,
+        message: "Verified payment not found",
+      })
+    }
+
+    const enrolledStudent = await User.findById(userId).select("email firstName lastName")
 
     await mailSender(
       enrolledStudent.email,
       "Payment Received",
       paymentSuccessEmail(
         `${enrolledStudent.firstName} ${enrolledStudent.lastName}`,
-        amount / 100,
+        paymentOrder.amount / 100,
         orderId,
         paymentId
       )
@@ -181,11 +290,11 @@ const enrollStudents = async (courses, userId) => {
       throw new Error("Course not found")
     }
 
-    const courseProgress = await CourseProgress.create({
-      courseID: courseId,
-      userId,
-      completedVideos: [],
-    })
+    const courseProgress = await CourseProgress.findOneAndUpdate(
+      { courseID: courseId, userId },
+      { $setOnInsert: { completedVideos: [] } },
+      { new: true, upsert: true }
+    )
 
     const enrolledStudent = await User.findByIdAndUpdate(
       userId,

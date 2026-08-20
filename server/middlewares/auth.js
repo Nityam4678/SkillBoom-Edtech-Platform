@@ -8,11 +8,10 @@ dotenv.config();
 // This function is used as middleware to authenticate user requests
 exports.auth = async (req, res, next) => {
 	try {
-		// Extracting JWT from request cookies, body or header
-		const token =
-			req.cookies.token ||
-			req.body.token ||
-			req.header("Authorization").replace("Bearer ", "");
+		const authorization = req.header("Authorization");
+		const token = authorization && authorization.startsWith("Bearer ")
+			? authorization.slice(7)
+			: null;
 
 		// If JWT is missing, return 401 Unauthorized response
 		if (!token) {
@@ -25,10 +24,18 @@ exports.auth = async (req, res, next) => {
 			// Storing the decoded JWT payload in the request object for further use
 			req.user = decode;
 		} catch (error) {
-			// If JWT verification fails, return 401 Unauthorized response
-			return res
-				.status(401)
-				.json({ success: false, message: "token is invalid" });
+			if (error.name === "TokenExpiredError") {
+				return res.status(401).json({
+					success: false,
+					message: "Access token expired",
+					code: "ACCESS_TOKEN_EXPIRED",
+				});
+			}
+			return res.status(401).json({
+				success: false,
+				message: "Access token invalid",
+				code: "ACCESS_TOKEN_INVALID",
+			});
 		}
 
 		// If JWT is valid, move on to the next middleware or request handler
@@ -43,10 +50,16 @@ exports.auth = async (req, res, next) => {
 };
 exports.isStudent = async (req, res, next) => {
 	try {
-		const userDetails = await User.findOne({ email: req.user.email });
+		const userDetails = await User.findById(req.user.id);
 
-		if (userDetails.accountType !== "Student") {
+		if (!userDetails) {
 			return res.status(401).json({
+				success: false,
+				message: "User is not authenticated",
+			});
+		}
+		if (userDetails.accountType !== "Student") {
+			return res.status(403).json({
 				success: false,
 				message: "This is a Protected Route for Students",
 			});
@@ -60,10 +73,16 @@ exports.isStudent = async (req, res, next) => {
 };
 exports.isAdmin = async (req, res, next) => {
 	try {
-		const userDetails = await User.findOne({ email: req.user.email });
+		const userDetails = await User.findById(req.user.id);
 
-		if (userDetails.accountType !== "Admin") {
+		if (!userDetails) {
 			return res.status(401).json({
+				success: false,
+				message: "User is not authenticated",
+			});
+		}
+		if (userDetails.accountType !== "Admin") {
+			return res.status(403).json({
 				success: false,
 				message: "This is a Protected Route for Admin",
 			});
@@ -77,10 +96,18 @@ exports.isAdmin = async (req, res, next) => {
 };
 exports.isInstructor = async (req, res, next) => {
 	try {
-		const userDetails = await User.findOne({ email: req.user.email });
+		const userDetails = await User.findById(req.user.id);
 
-		if (userDetails.accountType !== "Instructor") {
+		if (
+			!userDetails
+		) {
 			return res.status(401).json({
+				success: false,
+				message: "This is a Protected Route for Instructor",
+			});
+		}
+		if (userDetails.accountType !== "Instructor" || !userDetails.approved) {
+			return res.status(403).json({
 				success: false,
 				message: "This is a Protected Route for Instructor",
 			});

@@ -1,6 +1,8 @@
 // Import necessary modules
 const Section = require("../models/Section")
 const SubSection = require("../models/SubSection")
+const Course = require("../models/Course")
+const mongoose = require("mongoose")
 const { uploadImageToCloudinary } = require("../utils/imageUploader")
 
 // Create a new sub-section for a given section
@@ -8,7 +10,10 @@ exports.createSubSection = async (req, res) => {
   try {
     // Extract necessary information from the request body
     const { sectionId, title, description } = req.body
-    const video = req.files.video
+    if (!mongoose.Types.ObjectId.isValid(sectionId)) {
+      return res.status(404).json({ success: false, message: "Section not found" })
+    }
+    const video = req.files && req.files.video
 
     // Check if all necessary fields are provided
     if (!sectionId || !title || !description || !video) {
@@ -16,14 +21,19 @@ exports.createSubSection = async (req, res) => {
         .status(404)
         .json({ success: false, message: "All Fields are Required" })
     }
-     console.log(video)
+    const course = await Course.findOne({
+      instructor: req.user.id,
+      courseContent: sectionId,
+    })
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Section not found" })
+    }
 
     // Upload the video file to Cloudinary
     const uploadDetails = await uploadImageToCloudinary(
       video,
       process.env.FOLDER_NAME
     )
-     console.log(uploadDetails)
     // Create a new sub-section with the necessary information
     const SubSectionDetails = await SubSection.create({
       title: title,
@@ -47,7 +57,7 @@ exports.createSubSection = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error.message,
+      message: "Internal server error",
     })
   }
 }
@@ -55,6 +65,17 @@ exports.createSubSection = async (req, res) => {
 exports.updateSubSection = async (req, res) => {
   try {
     const { sectionId, subSectionId, title, description } = req.body
+    if (!mongoose.Types.ObjectId.isValid(sectionId) || !mongoose.Types.ObjectId.isValid(subSectionId)) {
+      return res.status(404).json({ success: false, message: "SubSection not found" })
+    }
+    const course = await Course.findOne({
+      instructor: req.user.id,
+      courseContent: sectionId,
+    })
+    const section = await Section.findOne({ _id: sectionId, subSection: subSectionId })
+    if (!course || !section) {
+      return res.status(404).json({ success: false, message: "SubSection not found" })
+    }
     const subSection = await SubSection.findById(subSectionId)
 
     if (!subSection) {
@@ -107,6 +128,17 @@ exports.updateSubSection = async (req, res) => {
 exports.deleteSubSection = async (req, res) => {
   try {
     const { subSectionId, sectionId } = req.body
+    if (!mongoose.Types.ObjectId.isValid(sectionId) || !mongoose.Types.ObjectId.isValid(subSectionId)) {
+      return res.status(404).json({ success: false, message: "SubSection not found" })
+    }
+    const course = await Course.findOne({
+      instructor: req.user.id,
+      courseContent: sectionId,
+    })
+    const section = await Section.findOne({ _id: sectionId, subSection: subSectionId })
+    if (!course || !section) {
+      return res.status(404).json({ success: false, message: "SubSection not found" })
+    }
     await Section.findByIdAndUpdate(
       { _id: sectionId },
       {

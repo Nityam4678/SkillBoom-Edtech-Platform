@@ -1,11 +1,15 @@
 const Section = require("../models/Section");
 const Course = require("../models/Course");
 const SubSection = require("../models/SubSection");
+const mongoose = require("mongoose");
 // CREATE a new section
 exports.createSection = async (req, res) => {
 	try {
 		// Extract the required properties from the request body
 		const { sectionName, courseId } = req.body;
+		if (!mongoose.Types.ObjectId.isValid(courseId)) {
+			return res.status(404).json({ success: false, message: "Course not found" });
+		}
 
 		// Validate the input
 		if (!sectionName || !courseId) {
@@ -13,6 +17,10 @@ exports.createSection = async (req, res) => {
 				success: false,
 				message: "Missing required properties",
 			});
+		}
+		const course = await Course.findOne({ _id: courseId, instructor: req.user.id });
+		if (!course) {
+			return res.status(404).json({ success: false, message: "Course not found" });
 		}
 
 		// Create a new section with the given name
@@ -47,7 +55,7 @@ exports.createSection = async (req, res) => {
 		res.status(500).json({
 			success: false,
 			message: "Internal server error",
-			error: error.message,
+			message: "Internal server error",
 		});
 	}
 };
@@ -56,13 +64,24 @@ exports.createSection = async (req, res) => {
 exports.updateSection = async (req, res) => {
 	try {
 		const { sectionName, sectionId,courseId } = req.body;
+		if (!mongoose.Types.ObjectId.isValid(sectionId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+			return res.status(404).json({ success: false, message: "Section not found" });
+		}
+		const course = await Course.findOne({
+			_id: courseId,
+			instructor: req.user.id,
+			courseContent: sectionId,
+		});
+		if (!course) {
+			return res.status(404).json({ success: false, message: "Section not found" });
+		}
 		const section = await Section.findByIdAndUpdate(
 			sectionId,
 			{ sectionName },
 			{ new: true }
 		);
 
-		const course = await Course.findById(courseId)
+		const updatedCourse = await Course.findById(courseId)
 		.populate({
 			path:"courseContent",
 			populate:{
@@ -74,7 +93,7 @@ exports.updateSection = async (req, res) => {
 		res.status(200).json({
 			success: true,
 			message: section,
-			data:course,
+			data:updatedCourse,
 		});
 	} catch (error) {
 		console.error("Error updating section:", error);
@@ -90,6 +109,17 @@ exports.deleteSection = async (req, res) => {
 	try {
 
 		const { sectionId, courseId }  = req.body;
+		if (!mongoose.Types.ObjectId.isValid(sectionId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+			return res.status(404).json({ success: false, message: "Section not found" });
+		}
+		const course = await Course.findOne({
+			_id: courseId,
+			instructor: req.user.id,
+			courseContent: sectionId,
+		});
+		if (!course) {
+			return res.status(404).json({ success: false, message: "Section not found" });
+		}
 		await Course.findByIdAndUpdate(courseId, {
 			$pull: {
 				courseContent: sectionId,
@@ -110,7 +140,7 @@ exports.deleteSection = async (req, res) => {
 		await Section.findByIdAndDelete(sectionId);
 
 		//find the updated course and return 
-		const course = await Course.findById(courseId).populate({
+		const updatedCourse = await Course.findById(courseId).populate({
 			path:"courseContent",
 			populate: {
 				path: "subSection"
@@ -121,7 +151,7 @@ exports.deleteSection = async (req, res) => {
 		res.status(200).json({
 			success:true,
 			message:"Section deleted",
-			data:course
+			data:updatedCourse
 		});
 	} catch (error) {
 		console.error("Error deleting section:", error);

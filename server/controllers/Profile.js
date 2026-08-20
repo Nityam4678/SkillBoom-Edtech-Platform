@@ -10,12 +10,12 @@ const { convertSecondsToDuration } = require("../utils/secToDuration")
 exports.updateProfile = async (req, res) => {
   try {
     const {
-      firstName = "",
-      lastName = "",
-      dateOfBirth = "",
-      about = "",
-      contactNumber = "",
-      gender = "",
+      firstName,
+      lastName,
+      dateOfBirth,
+      about,
+      contactNumber,
+      gender,
     } = req.body
     const id = req.user.id
 
@@ -43,10 +43,10 @@ exports.updateProfile = async (req, res) => {
       })
     }
 
-    const user = await User.findByIdAndUpdate(id, {
-      firstName,
-      lastName,
-    }, { new: true })
+    const userUpdates = {}
+    if (firstName !== undefined) userUpdates.firstName = firstName
+    if (lastName !== undefined) userUpdates.lastName = lastName
+    const user = await User.findByIdAndUpdate(id, userUpdates, { new: true })
     
     if (!user) {
       return res.status(404).json({
@@ -56,29 +56,30 @@ exports.updateProfile = async (req, res) => {
     }
 
     // Update the profile fields
-    profile.dateOfBirth = dateOfBirth
-    profile.about = about
-    profile.contactNumber = contactNumber
-    profile.gender = gender
+    if (dateOfBirth !== undefined) profile.dateOfBirth = dateOfBirth
+    if (about !== undefined) profile.about = about
+    if (contactNumber !== undefined) profile.contactNumber = contactNumber
+    if (gender !== undefined) profile.gender = gender
 
     // Save the updated profile
     await profile.save()
 
     // Find the updated user details
     const updatedUserDetails = await User.findById(id)
+      .select("-password -token")
       .populate("additionalDetails")
       .exec()
 
-    return res.json({
-      success: true,
-      message: "Profile updated successfully",
-      updatedUserDetails,
-    })
+      return res.status(200).json({
+        success: true,
+        message: "Profile updated successfully",
+        updatedUserDetails,
+      })
   } catch (error) {
      console.log(error)
     return res.status(500).json({
       success: false,
-      error: error.message,
+      message: "Could not update profile",
     })
   }
 }
@@ -101,17 +102,17 @@ exports.deleteAccount = async (req, res) => {
     for (const courseId of user.courses) {
       await Course.findByIdAndUpdate(
         courseId,
-        { $pull: { studentsEnroled: id } },
+        { $pull: { studentsEnrolled: id } },
         { new: true }
       )
     }
     // Now Delete User
     await User.findByIdAndDelete(id)
+    await CourseProgress.deleteMany({ userId: id })
     res.status(200).json({
       success: true,
       message: "User deleted successfully",
     })
-    await CourseProgress.deleteMany({ userId: id })
   } catch (error) {
      console.log(error)
     res
@@ -124,6 +125,7 @@ exports.getAllUserDetails = async (req, res) => {
   try {
     const id = req.user.id
     const userDetails = await User.findById(id)
+      .select("-password -token")
       .populate("additionalDetails")
       .exec()
     
@@ -134,7 +136,6 @@ exports.getAllUserDetails = async (req, res) => {
       })
     }
     
-     console.log(userDetails)
     res.status(200).json({
       success: true,
       message: "User Data fetched successfully",
@@ -143,7 +144,7 @@ exports.getAllUserDetails = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Could not fetch user details",
     })
   }
 }
@@ -165,7 +166,6 @@ exports.updateDisplayPicture = async (req, res) => {
       1000,
       1000
     )
-     console.log(image)
     const updatedProfile = await User.findByIdAndUpdate(
       userId,
       { image: image.secure_url },
@@ -179,15 +179,18 @@ exports.updateDisplayPicture = async (req, res) => {
       })
     }
     
-    res.send({
+    const profileResponse = updatedProfile.toObject()
+    delete profileResponse.password
+    delete profileResponse.token
+    res.status(200).json({
       success: true,
       message: `Image Updated successfully`,
-      data: updatedProfile,
+      data: profileResponse,
     })
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Could not update display picture",
     })
   }
 }
@@ -210,14 +213,13 @@ exports.getEnrolledCourses = async (req, res) => {
       .exec()
     
     if (!userDetails) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
-        message: `Could not find user with id: ${userId}`,
+        message: "User not found",
       })
     }
     
     userDetails = userDetails.toObject()
-    console.log("userDetails : ", userDetails);
     
     // Check if courses exist and is an array
     if (!userDetails.courses || !Array.isArray(userDetails.courses)) {
@@ -227,6 +229,15 @@ exports.getEnrolledCourses = async (req, res) => {
       })
     }
     
+    const courseIds = userDetails.courses.map((course) => course._id)
+    const progressRecords = await CourseProgress.find({
+      userId,
+      courseID: { $in: courseIds },
+    }).select("courseID completedVideos").lean()
+    const progressByCourse = new Map(
+      progressRecords.map((progress) => [String(progress.courseID), progress])
+    )
+
     var SubsectionLength = 0
     for (var i = 0; i < userDetails.courses.length; i++) {
       let totalDurationInSeconds = 0
@@ -251,10 +262,7 @@ exports.getEnrolledCourses = async (req, res) => {
       userDetails.courses[i].totalDuration = convertSecondsToDuration(
         totalDurationInSeconds
       )
-      let courseProgressCount = await CourseProgress.findOne({
-        courseID: userDetails.courses[i]._id,
-        userId: userId,
-      })
+      let courseProgressCount = progressByCourse.get(String(userDetails.courses[i]._id))
       courseProgressCount = courseProgressCount?.completedVideos?.length || 0
       if (SubsectionLength === 0) {
         userDetails.courses[i].progressPercentage = 100
@@ -275,7 +283,7 @@ exports.getEnrolledCourses = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Could not fetch enrolled courses",
     })
   }
 }

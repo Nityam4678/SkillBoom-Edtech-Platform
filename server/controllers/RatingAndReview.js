@@ -1,6 +1,6 @@
 const RatingAndReview = require("../models/RatingAndRaview");
 const Course = require("../models/Course");
-const { mongo, default: mongoose } = require("mongoose");
+const mongoose = require("mongoose");
 
 //createRating
 exports.createRating = async (req, res) => {
@@ -29,7 +29,7 @@ exports.createRating = async (req, res) => {
                                                 course:courseId,
                                             });
         if(alreadyReviewed) {
-                    return res.status(403).json({
+                    return res.status(409).json({
                         success:false,
                         message:'Course is already reviewed by the user',
                     });
@@ -50,7 +50,7 @@ exports.createRating = async (req, res) => {
                                     },
                                     {new: true});
         //return response
-        return res.status(200).json({
+        return res.status(201).json({
             success:true,
             message:"Rating and Review created Successfully",
             ratingReview,
@@ -59,7 +59,7 @@ exports.createRating = async (req, res) => {
     catch(error) {
         return res.status(500).json({
             success:false,
-            message:error.message,
+            message:"Could not create rating",
         })
     }
 }
@@ -107,7 +107,7 @@ exports.getAverageRating = async (req, res) => {
     catch(error) {
         return res.status(500).json({
             success:false,
-            message:error.message,
+            message:"Could not calculate average rating",
         })
     }
 }
@@ -117,27 +117,41 @@ exports.getAverageRating = async (req, res) => {
 
 exports.getAllRating = async (req, res) => {
     try{
-            const allReviews = await RatingAndReview.find({})
-                                    .sort({rating: "desc"})
-                                    .populate({
-                                        path:"user",
-                                        select:"firstName lastName email image",
-                                    })
-                                    .populate({
-                                        path:"course",
-                                        select: "courseName",
-                                    })
-                                    .exec();
+            const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1);
+            const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 10, 1), 50);
+            const skip = (page - 1) * limit;
+            const [allReviews, total] = await Promise.all([
+                RatingAndReview.find({})
+                    .sort({rating: "desc"})
+                    .skip(skip)
+                    .limit(limit)
+                    .populate({
+                        path:"user",
+                        select:"firstName lastName email image",
+                    })
+                    .populate({
+                        path:"course",
+                        select: "courseName",
+                    })
+                    .exec(),
+                RatingAndReview.countDocuments({})
+            ]);
             return res.status(200).json({
                 success:true,
                 message:"All reviews fetched successfully",
                 data:allReviews,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    pages: Math.ceil(total / limit),
+                },
             });
     }   
     catch(error) {
         return res.status(500).json({
             success:false,
-            message:error.message,
+            message:"Could not fetch reviews",
         })
     } 
 }

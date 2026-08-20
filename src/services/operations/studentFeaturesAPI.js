@@ -45,7 +45,7 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch)
         if(!orderResponse.data.success) {
             throw new Error(orderResponse.data.message);
         }
-        const keyy = "rzp_test_RuGwkO6MSAUiUg";
+        const keyy = process.env.REACT_APP_RAZORPAY_KEY;
         //options
         const options = {
             key: keyy,
@@ -60,10 +60,13 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch)
                 email:userDetails.email
             },
             handler: function(response) {
-                //send successful wala mail
-                sendPaymentSuccessEmail(response, orderResponse.data.data.amount,token );
                 //verifyPayment
-                verifyPayment({...response, courses}, token, navigate, dispatch);
+                verifyPayment({...response, courses}, token, navigate, dispatch)
+                    .then((verified) => {
+                        if (verified) {
+                            sendPaymentSuccessEmail(response, token)
+                        }
+                    });
             }
         }
         //miss hogya tha 
@@ -80,12 +83,11 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch)
     toast.dismiss(toastId);
 }
 
-async function sendPaymentSuccessEmail(response, amount, token) {
+async function sendPaymentSuccessEmail(response, token) {
     try{
         await apiConnector("POST", SEND_PAYMENT_SUCCESS_EMAIL_API, {
             orderId: response.razorpay_order_id,
             paymentId: response.razorpay_payment_id,
-            amount,
         },{
             Authorization: `Bearer ${token}`
         })
@@ -109,10 +111,12 @@ async function verifyPayment(bodyData, token, navigate, dispatch) {
         toast.success("payment Successful, you are added to the course");
         navigate("/dashboard/enrolled-courses");
         dispatch(resetCart());
+        return true;
     }   
     catch(error) {
         toast.error("Could not verify Payment");
     }
     toast.dismiss(toastId);
     dispatch(setPaymentLoading(false));
+    return false;
 }

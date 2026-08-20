@@ -1,5 +1,6 @@
 const { Mongoose } = require("mongoose");
 const Category = require("../models/Category");
+const mongoose = require("mongoose");
 function getRandomInt(max) {
     return Math.floor(Math.random() * max)
   }
@@ -16,22 +17,20 @@ exports.createCategory = async (req, res) => {
 			name: name,
 			description: description,
 		});
-		 console.log(CategorysDetails);
-		return res.status(200).json({
+    return res.status(201).json({
 			success: true,
 			message: "Categorys Created Successfully",
 		});
 	} catch (error) {
-		return res.status(500).json({
-			success: true,
-			message: error.message,
+    return res.status(500).json({
+      success: false,
+      message: "Could not create category",
 		});
 	}
 };
 
 exports.showAllCategories = async (req, res) => {
 	try {
-         console.log("INSIDE SHOW ALL CATEGORIES");
 		const allCategorys = await Category.find({});
 		res.status(200).json({
 			success: true,
@@ -40,7 +39,7 @@ exports.showAllCategories = async (req, res) => {
 	} catch (error) {
 		return res.status(500).json({
 			success: false,
-			message:`Error ${error.message}`,
+      message:"Could not fetch categories",
 		});
 	}
 };
@@ -143,7 +142,6 @@ exports.categoryPageDetails = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error.message,
     })
   }
 }
