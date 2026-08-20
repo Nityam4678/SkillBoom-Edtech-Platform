@@ -237,7 +237,7 @@ exports.getAllCourses = async (req, res) => {
           studentsEnrolled: true,
         }
       )
-        .populate("instructor")
+        .populate("instructor", "firstName lastName image accountType")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

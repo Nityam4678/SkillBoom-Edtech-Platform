@@ -1,0 +1,94 @@
+{
+  "info": {
+    "name": "SkillBoom API Tests",
+    "description": "Reusable smoke and negative-path collection. Set baseUrl and dedicated test-account variables in a local Postman environment. Never store real passwords, OTPs, tokens, or payment secrets in this file.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://skillboom-backend.example.com" },
+    { "key": "accessToken", "value": "" },
+    { "key": "studentEmail", "value": "" },
+    { "key": "studentPassword", "value": "" },
+    { "key": "instructorEmail", "value": "" },
+    { "key": "instructorPassword", "value": "" },
+    { "key": "adminEmail", "value": "" },
+    { "key": "adminPassword", "value": "" },
+    { "key": "courseId", "value": "" },
+    { "key": "sectionId", "value": "" },
+    { "key": "subsectionId", "value": "" },
+    { "key": "categoryId", "value": "" },
+    { "key": "reviewId", "value": "" },
+    { "key": "orderId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 Health",
+      "item": [
+        { "name": "Health", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/" } }
+      ]
+    },
+    {
+      "name": "02 Authentication",
+      "item": [
+        { "name": "Send OTP", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{$randomEmail}}\"\n}" }, "url": "{{baseUrl}}/api/v1/auth/sendotp" } },
+        { "name": "Signup", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"API\",\n  \"lastName\": \"Test\",\n  \"email\": \"{{$randomEmail}}\",\n  \"password\": \"{{studentPassword}}\",\n  \"confirmPassword\": \"{{studentPassword}}\",\n  \"accountType\": \"Student\",\n  \"otp\": \"000000\"\n}" }, "url": "{{baseUrl}}/api/v1/auth/signup", "description": "Requires a real OTP delivered to the dedicated test mailbox. Do not use against an account you do not own." } },
+        { "name": "Login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}" }, "url": "{{baseUrl}}/api/v1/auth/login" } },
+        { "name": "Refresh", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/auth/refresh" } },
+        { "name": "Logout", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/auth/logout" } },
+        { "name": "Change Password", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"oldPassword\": \"{{studentPassword}}\",\n  \"newPassword\": \"{{studentPassword}}\"\n}" }, "url": "{{baseUrl}}/api/v1/auth/changepassword", "description": "Mutation: use only with a dedicated test account." } },
+        { "name": "Request Password Reset", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{studentEmail}}\"\n}" }, "url": "{{baseUrl}}/api/v1/auth/reset-password-token", "description": "Email-dependent; verify through the dedicated test mailbox." } },
+        { "name": "Reset Password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"password\": \"{{studentPassword}}\",\n  \"confirmPassword\": \"{{studentPassword}}\",\n  \"token\": \"replace-locally\"\n}" }, "url": "{{baseUrl}}/api/v1/auth/reset-password", "description": "Do not store the reset token in this collection." } }
+      ]
+    },
+    {
+      "name": "03 Users and Profile",
+      "item": [
+        { "name": "Get User Details", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/v1/profile/getUserDetails" } },
+        { "name": "Get Enrolled Courses", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/v1/profile/getEnrolledCourses" } },
+        { "name": "Instructor Dashboard", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/v1/profile/instructorDashboard" } },
+        { "name": "Update Profile", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{}" }, "url": "{{baseUrl}}/api/v1/profile/updateProfile", "description": "Mutation: dedicated test account only." } },
+        { "name": "Update Display Picture", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "displayPicture", "type": "file", "src": "" }] }, "url": "{{baseUrl}}/api/v1/profile/updateDisplayPicture", "description": "Upload test file only." } },
+        { "name": "Delete Profile", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/v1/profile/deleteProfile", "description": "DESTRUCTIVE: do not run against production unless the account was created solely for this test." } }
+      ]
+    },
+    {
+      "name": "04 Courses",
+      "item": [
+        { "name": "List Courses", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/course/getAllCourses?page=1&limit=10" } },
+        { "name": "Course Details", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\"\n}" }, "url": "{{baseUrl}}/api/v1/course/getCourseDetails" } },
+        { "name": "Full Course Details", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\"\n}" }, "url": "{{baseUrl}}/api/v1/course/getFullCourseDetails" } },
+        { "name": "Show Categories", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/course/showAllCategories" } },
+        { "name": "Category Page Details", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"categoryId\": \"{{categoryId}}\"\n}" }, "url": "{{baseUrl}}/api/v1/course/getCategoryPageDetails" } },
+        { "name": "Instructor Courses", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/v1/course/getInstructorCourses" } },
+        { "name": "Create Course", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "formdata", "formdata": [] }, "url": "{{baseUrl}}/api/v1/course/createCourse", "description": "Mutation: requires instructor and dedicated test data." } },
+        { "name": "Edit Course", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\"\n}" }, "url": "{{baseUrl}}/api/v1/course/editCourse", "description": "Mutation: dedicated test resource only." } },
+        { "name": "Delete Course", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\"\n}" }, "url": "{{baseUrl}}/api/v1/course/deleteCourse", "description": "DESTRUCTIVE: dedicated test resource only." } },
+        { "name": "Add Section", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"sectionName\": \"API Test Section\"\n}" }, "url": "{{baseUrl}}/api/v1/course/addSection" } },
+        { "name": "Update Section", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"sectionId\": \"{{sectionId}}\",\n  \"sectionName\": \"API Test Section Updated\"\n}" }, "url": "{{baseUrl}}/api/v1/course/updateSection" } },
+        { "name": "Delete Section", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"sectionId\": \"{{sectionId}}\",\n  \"courseId\": \"{{courseId}}\"\n}" }, "url": "{{baseUrl}}/api/v1/course/deleteSection", "description": "DESTRUCTIVE: dedicated test resource only." } },
+        { "name": "Add Subsection", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "formdata", "formdata": [] }, "url": "{{baseUrl}}/api/v1/course/addSubSection" } },
+        { "name": "Update Subsection", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "formdata", "formdata": [] }, "url": "{{baseUrl}}/api/v1/course/updateSubSection" } },
+        { "name": "Delete Subsection", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"subSectionId\": \"{{subsectionId}}\",\n  \"sectionId\": \"{{sectionId}}\"\n}" }, "url": "{{baseUrl}}/api/v1/course/deleteSubSection", "description": "DESTRUCTIVE: dedicated test resource only." } },
+        { "name": "Update Progress", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"subsectionId\": \"{{subsectionId}}\"\n}" }, "url": "{{baseUrl}}/api/v1/course/updateCourseProgress" } },
+        { "name": "Create Category", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"API Test Category\"\n}" }, "url": "{{baseUrl}}/api/v1/course/createCategory", "description": "Mutation: admin-only; dedicated test data only." } },
+        { "name": "Create Rating", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"rating\": 5,\n  \"review\": \"API test review\"\n}" }, "url": "{{baseUrl}}/api/v1/course/createRating", "description": "Mutation: dedicated test course only." } },
+        { "name": "Average Rating", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/course/getAverageRating?courseId={{courseId}}" } },
+        { "name": "Reviews", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/course/getReviews?courseId={{courseId}}" } }
+      ]
+    },
+    {
+      "name": "05 Payments",
+      "item": [
+        { "name": "Capture Payment", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"courses\": [\"{{courseId}}\"]\n}" }, "url": "{{baseUrl}}/api/v1/payment/capturePayment", "description": "Do not run against production unless Razorpay test mode and dedicated data are confirmed." } },
+        { "name": "Verify Payment Invalid Signature", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"razorpay_order_id\": \"{{orderId}}\",\n  \"razorpay_payment_id\": \"safe-invalid-payment\",\n  \"razorpay_signature\": \"safe-invalid-signature-000000\",\n  \"courses\": [\"{{courseId}}\"]\n}" }, "url": "{{baseUrl}}/api/v1/payment/verifyPayment", "description": "Safe negative-path test only; no transaction should be created." } },
+        { "name": "Payment Success Email", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\"\n}" }, "url": "{{baseUrl}}/api/v1/payment/sendPaymentSuccessEmail", "description": "Email-dependent; dedicated test order only." } }
+      ]
+    },
+    {
+      "name": "06 Contact",
+      "item": [
+        { "name": "Contact", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"firstname\": \"API\",\n  \"lastname\": \"Test\",\n  \"email\": \"{{$randomEmail}}\",\n  \"phoneNo\": \"0000000000\",\n  \"countrycode\": \"+1\",\n  \"message\": \"Safe API smoke test\"\n}" }, "url": "{{baseUrl}}/api/v1/reach/contact", "description": "May send email; use only if production mail side effects are approved." } }
+      ]
+    }
+  ]
+}

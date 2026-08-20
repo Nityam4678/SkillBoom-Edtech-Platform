@@ -115,6 +115,7 @@ exports.categoryPageDetails = async (req, res) => {
         match: { status: "Published" },
         populate: {
           path: "instructor",
+          select: "firstName lastName image accountType",
         },
       })
       .exec()
