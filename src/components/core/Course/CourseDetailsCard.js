@@ -1,4 +1,4 @@
-import React, { useEffect } from "react"
+import React from "react"
 import copy from "copy-to-clipboard"
 import { toast } from "react-hot-toast"
 import { BsFillCaretRightFill } from "react-icons/bs"
@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom"
 
 import { addToCart } from "../../../slices/cartSlice"
 import { ACCOUNT_TYPE } from "../../../utils/constants"
-import { use } from "react"
 
 
 function CourseDetailsCard({ course, setConfirmationModal, handleBuyCourse }) {
@@ -19,7 +18,6 @@ function CourseDetailsCard({ course, setConfirmationModal, handleBuyCourse }) {
   const {
     thumbnail: ThumbnailImage,
     price: CurrentPrice,
-    _id: courseId,
   } = course
 
   const handleShare = () => {
