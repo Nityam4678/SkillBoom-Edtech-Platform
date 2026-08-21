@@ -27,11 +27,8 @@ const signupValidation = [
   password,
   confirmPassword,
   body("accountType").isIn(["Student", "Instructor"]),
-  body("otp").trim().matches(/^\d{6}$/),
   validate,
 ]
-
-const otpValidation = [email, validate]
 
 const passwordResetRequestValidation = [email, validate]
 
@@ -76,7 +73,6 @@ module.exports = {
   validate,
   loginValidation,
   signupValidation,
-  otpValidation,
   passwordResetRequestValidation,
   passwordResetValidation,
   changePasswordValidation,

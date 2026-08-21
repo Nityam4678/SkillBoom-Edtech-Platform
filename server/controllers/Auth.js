@@ -1,9 +1,7 @@
 const bcrypt = require("bcryptjs")
 const crypto = require("crypto")
 const User = require("../models/User")
-const OTP = require("../models/OTP")
 const jwt = require("jsonwebtoken")
-const otpGenerator = require("otp-generator")
 const mailSender = require("../utils/mailSender")
 const { passwordUpdated } = require("../mail/templates/passwordUpdate")
 const Profile = require("../models/Profile")
@@ -31,7 +29,6 @@ exports.signup = async (req, res) => {
       confirmPassword,
       accountType,
       contactNumber,
-      otp,
     } = req.body
     // Check if All Details are there or not
     if (
@@ -39,8 +36,7 @@ exports.signup = async (req, res) => {
       !lastName ||
       !email ||
       !password ||
-      !confirmPassword ||
-      !otp
+      !confirmPassword
     ) {
       return res.status(400).json({
         success: false,
@@ -64,27 +60,6 @@ exports.signup = async (req, res) => {
         message: "User already exists. Please sign in to continue.",
       })
     }
-
-    // Find the most recent OTP for the email
-    const otpRecord = await OTP.findOne({ email })
-      .select("+otpHash attempts createdAt")
-      .sort({ createdAt: -1 })
-    if (!otpRecord || otpRecord.attempts >= 5) {
-      // OTP not found for the email
-      return res.status(400).json({
-        success: false,
-        message: "The OTP is not valid",
-      })
-    } else if (!(await bcrypt.compare(otp, otpRecord.otpHash))) {
-      await OTP.updateOne({ _id: otpRecord._id }, { $inc: { attempts: 1 } })
-      // Invalid OTP
-      return res.status(400).json({
-        success: false,
-        message: "The OTP is not valid",
-      })
-    }
-
-    await OTP.deleteOne({ _id: otpRecord._id })
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10)

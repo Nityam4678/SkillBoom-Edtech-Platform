@@ -4,7 +4,6 @@ const BASE_URL = `${FRONTEND_API_URL}/api/v1`
 
 // AUTH ENDPOINTS
 export const endpoints = {
-  SENDOTP_API: BASE_URL + "/auth/sendotp",
   SIGNUP_API: BASE_URL + "/auth/signup",
   LOGIN_API: BASE_URL + "/auth/login",
   REFRESH_API: BASE_URL + "/auth/refresh",
