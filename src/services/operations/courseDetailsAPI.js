@@ -97,8 +97,8 @@ export const addCourseDetails = async (data, token) => {
     toast.success("Course Details Added Successfully")
     result = response?.data?.data
   } catch (error) {
-    //  console.log("CREATE COURSE API ERROR............", error)
-    toast.error(error.message)
+    const message = error.response?.data?.message || "Could Not Add Course Details"
+    toast.error(message)
   }
   toast.dismiss(toastId)
   return result

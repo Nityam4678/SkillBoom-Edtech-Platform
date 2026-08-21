@@ -54,7 +54,6 @@ exports.createCourse = async (req, res) => {
     const instructorDetails = await User.findOne({
       _id: userId,
       accountType: "Instructor",
-      approved: true,
     })
 
     if (!instructorDetails) {

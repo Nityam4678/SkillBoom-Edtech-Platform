@@ -2,12 +2,7 @@ const { instance } = require("../config/razorpay")
 const Course = require("../models/Course")
 const crypto = require("crypto")
 const User = require("../models/User")
-const mailSender = require("../utils/mailSender")
 const mongoose = require("mongoose")
-const {
-  courseEnrollmentEmail,
-} = require("../mail/templates/courseEnrollmentEmail")
-const { paymentSuccessEmail } = require("../mail/templates/paymentSuccessEmail")
 const CourseProgress = require("../models/CourseProgress")
 const PaymentOrder = require("../models/PaymentOrder")
 
@@ -221,58 +216,6 @@ exports.verifyPayment = async (req, res) => {
 }
 
 
-// Send Payment Success Email
-exports.sendPaymentSuccessEmail = async (req, res) => {
-  try {
-    const { orderId, paymentId } = req.body
-    const userId = req.user.id
-
-    if (!orderId || !paymentId || !userId) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing payment details",
-      })
-    }
-
-    const paymentOrder = await PaymentOrder.findOne({
-      orderId,
-      paymentId,
-      user: userId,
-      status: "Paid",
-    })
-    if (!paymentOrder) {
-      return res.status(404).json({
-        success: false,
-        message: "Verified payment not found",
-      })
-    }
-
-    const enrolledStudent = await User.findById(userId).select("email firstName lastName")
-
-    await mailSender(
-      enrolledStudent.email,
-      "Payment Received",
-      paymentSuccessEmail(
-        `${enrolledStudent.firstName} ${enrolledStudent.lastName}`,
-        paymentOrder.amount / 100,
-        orderId,
-        paymentId
-      )
-    )
-
-    return res.status(200).json({
-      success: true,
-      message: "Payment success email sent",
-    })
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Could not send email",
-    })
-  }
-}
-
-
 // enroll the student in the courses
 const enrollStudents = async (courses, userId) => {
   if (!courses || !userId) {
@@ -307,17 +250,6 @@ const enrollStudents = async (courses, userId) => {
       { new: true }
     )
 
-    try {
-      await mailSender(
-        enrolledStudent.email,
-        `Successfully Enrolled into ${enrolledCourse.courseName}`,
-        courseEnrollmentEmail(
-          enrolledCourse.courseName,
-          `${enrolledStudent.firstName} ${enrolledStudent.lastName}`
-        )
-      )
-    } catch (mailError) {
-    }
   }
 
   return true

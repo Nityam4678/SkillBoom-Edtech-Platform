@@ -34,8 +34,6 @@ Required backend variables:
 - `CLOUD_NAME`
 - `API_KEY`
 - `API_SECRET`
-- `RESEND_API_KEY`
-- `EMAIL_FROM=no-reply@skillboom.com` (the `skillboom.com` domain must be verified in Resend; local testing may use `onboarding@resend.dev` only for the Resend account email)
 - `FOLDER_NAME`
 - `RAZORPAY_KEY`
 - `RAZORPAY_SECRET`
@@ -104,8 +102,7 @@ For same-site deployment behind one parent domain, `lax` may be appropriate afte
 8. Run a Razorpay test payment.
 9. Verify Cloudinary media upload.
 10. Verify OTP and password-reset email delivery.
-11. With a logged-in account, call `POST /api/v1/auth/test-email`; the email is sent only to that account's email address.
-12. Confirm the browser console has no API/CORS errors.
+11. Confirm the browser console has no API/CORS errors.
 
 ## 7. Rollback
 

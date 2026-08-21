@@ -2,8 +2,6 @@ const bcrypt = require("bcryptjs")
 const crypto = require("crypto")
 const User = require("../models/User")
 const jwt = require("jsonwebtoken")
-const mailSender = require("../utils/mailSender")
-const { passwordUpdated } = require("../mail/templates/passwordUpdate")
 const Profile = require("../models/Profile")
 const AuthSession = require("../models/AuthSession")
 const {
@@ -71,7 +69,7 @@ exports.signup = async (req, res) => {
         message: "Invalid account type",
       })
     }
-    const approved = accountType !== "Instructor"
+    const approved = true
 
     // Create the Additional Profile For User
     const profileDetails = await Profile.create({
@@ -279,26 +277,6 @@ exports.changePassword = async (req, res) => {
       { password: encryptedPassword },
       { new: true }
     )
-
-    // Send notification email
-    try {
-      const emailResponse = await mailSender(
-        updatedUserDetails.email,
-        "Password for your account has been updated",
-        passwordUpdated(
-          updatedUserDetails.email,
-          `Password updated successfully for ${updatedUserDetails.firstName} ${updatedUserDetails.lastName}`
-        )
-      )
-      console.log("Email sent successfully:", emailResponse.response)
-    } catch (error) {
-      // If there's an error sending the email, log the error and return a 500 (Internal Server Error) error
-      console.error("Error occurred while sending email:", error)
-      return res.status(500).json({
-        success: false,
-        message: "Error occurred while sending email",
-      })
-    }
 
     // Return success response
     return res

@@ -6,7 +6,7 @@ import { setPaymentLoading } from "../../slices/courseSlice";
 import { resetCart } from "../../slices/cartSlice";
 
 
-const {COURSE_PAYMENT_API, COURSE_VERIFY_API, SEND_PAYMENT_SUCCESS_EMAIL_API} = studentEndpoints;
+const {COURSE_PAYMENT_API, COURSE_VERIFY_API} = studentEndpoints;
 
 function loadScript(src) {
     return new Promise((resolve) => {
@@ -32,6 +32,7 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch)
 
         if(!res) {
             toast.error("RazorPay SDK failed to load");
+            toast.dismiss(toastId);
             return;
         }
 
@@ -62,11 +63,7 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch)
             handler: function(response) {
                 //verifyPayment
                 verifyPayment({...response, courses}, token, navigate, dispatch)
-                    .then((verified) => {
-                        if (verified) {
-                            sendPaymentSuccessEmail(response, token)
-                        }
-                    });
+                    .then(() => {})
             }
         }
         //miss hogya tha 
@@ -76,24 +73,10 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch)
             toast.error("oops, payment failed");
         })
 
-    }
-    catch(error) {
+    } catch(error) {
         toast.error("Could not make Payment");
     }
     toast.dismiss(toastId);
-}
-
-async function sendPaymentSuccessEmail(response, token) {
-    try{
-        await apiConnector("POST", SEND_PAYMENT_SUCCESS_EMAIL_API, {
-            orderId: response.razorpay_order_id,
-            paymentId: response.razorpay_payment_id,
-        },{
-            Authorization: `Bearer ${token}`
-        })
-    }
-    catch(error) {
-    }
 }
 
 //verify payment
@@ -112,11 +95,12 @@ async function verifyPayment(bodyData, token, navigate, dispatch) {
         navigate("/dashboard/enrolled-courses");
         dispatch(resetCart());
         return true;
-    }   
-    catch(error) {
-        toast.error("Could not verify Payment");
     }
-    toast.dismiss(toastId);
-    dispatch(setPaymentLoading(false));
-    return false;
+    catch(error) {
+        toast.error(error.response?.data?.message || "Could not verify Payment");
+        return false;
+    } finally {
+        toast.dismiss(toastId);
+        dispatch(setPaymentLoading(false));
+    }
 }

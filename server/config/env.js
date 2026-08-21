@@ -6,8 +6,6 @@ const requiredVariables = [
   "CLOUD_NAME",
   "API_KEY",
   "API_SECRET",
-  "RESEND_API_KEY",
-  "EMAIL_FROM",
   "FOLDER_NAME",
   "RAZORPAY_KEY",
   "RAZORPAY_SECRET",

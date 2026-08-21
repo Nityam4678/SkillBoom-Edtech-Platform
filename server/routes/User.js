@@ -10,19 +10,11 @@ const {
   signup,
   changePassword,
 } = require("../controllers/Auth")
-const {
-  resetPasswordToken,
-  resetPassword,
-} = require("../controllers/ResetPassword")
-
 const { auth } = require("../middlewares/auth")
-const { testEmail } = require("../controllers/Email")
-const { authLimiter, passwordResetLimiter } = require("../middlewares/security")
+const { authLimiter } = require("../middlewares/security")
 const {
   loginValidation,
   signupValidation,
-  passwordResetRequestValidation,
-  passwordResetValidation,
   changePasswordValidation,
 } = require("../middlewares/validation")
 
@@ -42,17 +34,6 @@ router.post("/signup", authLimiter, signupValidation, signup)
 
 // Route for Changing the password
 router.post("/changepassword", auth, authLimiter, changePasswordValidation, changePassword)
-router.post("/test-email", auth, testEmail)
-
-// ********************************************************************************************************
-//                                      Reset Password
-// ********************************************************************************************************
-
-// Route for generating a reset password token
-router.post("/reset-password-token", passwordResetLimiter, passwordResetRequestValidation, resetPasswordToken)
-
-// Route for resetting user's password after verification
-router.post("/reset-password", passwordResetLimiter, passwordResetValidation, resetPassword)
 
 // Export the router for use in the main application
 module.exports = router

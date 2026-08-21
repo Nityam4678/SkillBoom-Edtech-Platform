@@ -8,8 +8,6 @@ export const endpoints = {
   LOGIN_API: BASE_URL + "/auth/login",
   REFRESH_API: BASE_URL + "/auth/refresh",
   LOGOUT_API: BASE_URL + "/auth/logout",
-  RESETPASSTOKEN_API: BASE_URL + "/auth/reset-password-token",
-  RESETPASSWORD_API: BASE_URL + "/auth/reset-password",
 }
 
 // PROFILE ENDPOINTS
@@ -23,7 +21,6 @@ export const profileEndpoints = {
 export const studentEndpoints = {
   COURSE_PAYMENT_API: BASE_URL + "/payment/capturePayment",
   COURSE_VERIFY_API: BASE_URL + "/payment/verifyPayment",
-  SEND_PAYMENT_SUCCESS_EMAIL_API: BASE_URL + "/payment/sendPaymentSuccessEmail",
 }
 
 // COURSE ENDPOINTS
