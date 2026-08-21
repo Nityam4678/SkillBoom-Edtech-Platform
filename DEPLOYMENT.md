@@ -34,9 +34,8 @@ Required backend variables:
 - `CLOUD_NAME`
 - `API_KEY`
 - `API_SECRET`
-- `MAIL_HOST`
-- `MAIL_USER`
-- `MAIL_PASS`
+- `RESEND_API_KEY`
+- `EMAIL_FROM=no-reply@skillboom.com` (the `skillboom.com` domain must be verified in Resend)
 - `FOLDER_NAME`
 - `RAZORPAY_KEY`
 - `RAZORPAY_SECRET`
@@ -78,7 +77,7 @@ Required frontend variables:
 - `REACT_APP_API_URL=https://<backend-host>`
 - `REACT_APP_RAZORPAY_KEY=<public-razorpay-key-id>`
 
-The frontend must not receive `JWT_SECRET`, `MONGODB_URL`, `API_SECRET`, `MAIL_PASS`, or `RAZORPAY_SECRET`.
+The frontend must not receive `JWT_SECRET`, `MONGODB_URL`, `API_SECRET`, `RESEND_API_KEY`, or `RAZORPAY_SECRET`.
 
 ## 5. CORS and Cookies
 
@@ -105,7 +104,8 @@ For same-site deployment behind one parent domain, `lax` may be appropriate afte
 8. Run a Razorpay test payment.
 9. Verify Cloudinary media upload.
 10. Verify OTP and password-reset email delivery.
-11. Confirm the browser console has no API/CORS errors.
+11. With a logged-in account, call `POST /api/v1/auth/test-email`; the email is sent only to that account's email address.
+12. Confirm the browser console has no API/CORS errors.
 
 ## 7. Rollback
 

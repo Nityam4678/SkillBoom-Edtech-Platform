@@ -1,40 +1,42 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend")
+
+const getResend = () => {
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error("Email is not configured: set RESEND_API_KEY in server .env")
+    }
+    return new Resend(process.env.RESEND_API_KEY)
+}
 
 const mailSender = async (email, title, body) => {
-    try{
-         if (!process.env.MAIL_HOST || !process.env.MAIL_USER || !process.env.MAIL_PASS) {
-            throw new Error(
-                "Email is not configured: set MAIL_HOST, MAIL_USER, and MAIL_PASS in server .env"
-            );
-         }
-            const port = Number(process.env.MAIL_PORT || 587)
-            const secure = (process.env.MAIL_SECURE || (port === 465 ? "true" : "false")) === "true"
+    try {
+        console.log("Email request started", { subject: title })
+        if (!process.env.EMAIL_FROM) {
+            throw new Error("Email is not configured: set EMAIL_FROM in server .env")
+        }
 
-            let transporter = nodemailer.createTransport({
-            host: process.env.MAIL_HOST,
-                port,
-                secure,
-                connectionTimeout: 10000,
-                greetingTimeout: 10000,
-                socketTimeout: 15000,
-            auth: {
-                user: process.env.MAIL_USER,
-                pass: process.env.MAIL_PASS,
-            }
-            });
+        console.log("Resend request attempted", { from: process.env.EMAIL_FROM, subject: title })
+        const { data, error } = await getResend().emails.send({
+            from: process.env.EMAIL_FROM,
+            to: email,
+            subject: title,
+            html: body,
+        })
 
+        if (error) {
+            const resendError = new Error(error.message || "Resend rejected the email")
+            resendError.statusCode = error.statusCode
+            throw resendError
+        }
 
-            let info = await transporter.sendMail({
-                from: 'StudyNotion || CodeHelp - by Babbar',
-                to:`${email}`,
-                subject: `${title}`,
-                html: `${body}`,
-            })
-            return info;
-    }
-    catch(error) {
-        console.error("mailSender error:", error.message);
-        throw error;
+        console.log("Resend request succeeded", { subject: title })
+        return data
+    } catch (error) {
+        console.error("Resend request failed", {
+            subject: title,
+            statusCode: error.statusCode,
+            message: error.message,
+        })
+        throw error
     }
 }
 

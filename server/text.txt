@@ -1,0 +1,29 @@
+node - <<'NODE'
+const dns = require("dns");
+const net = require("net");
+
+const host = "smtp.gmail.com";
+const ports = [587, 465, 25];
+
+dns.lookup(host, { all: true }, (dnsError, addresses) => {
+  console.log("DNS:", dnsError ? dnsError.message : addresses);
+
+  for (const port of ports) {
+    const socket = net.createConnection({ host, port, timeout: 8000 });
+
+    socket.on("connect", () => {
+      console.log(`PORT ${port}: ALLOWED`);
+      socket.destroy();
+    });
+
+    socket.on("timeout", () => {
+      console.log(`PORT ${port}: TIMEOUT`);
+      socket.destroy();
+    });
+
+    socket.on("error", (error) => {
+      console.log(`PORT ${port}: BLOCKED/ERROR - ${error.code || error.message}`);
+    });
+  }
+});
+NODE

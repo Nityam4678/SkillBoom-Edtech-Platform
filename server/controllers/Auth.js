@@ -237,6 +237,7 @@ exports.logout = async (req, res) => {
 exports.sendotp = async (req, res) => {
   try {
     const { email } = req.body
+    console.log("OTP email request started")
 
     // Check if user is already present
     // Find user with provided email
@@ -263,12 +264,14 @@ exports.sendotp = async (req, res) => {
     otpRecord._otp = otp
     await otpRecord.save()
 
+    console.log("OTP email request completed")
+
     res.status(200).json({
       success: true,
       message: `OTP Sent Successfully`,
     })
   } catch (error) {
-    console.log(error)
+    console.error("OTP email request failed", { message: error.message })
     return res.status(500).json({ success: false, message: "Could not send OTP" })
   }
 }

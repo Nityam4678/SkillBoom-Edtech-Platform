@@ -17,6 +17,7 @@ const {
 } = require("../controllers/ResetPassword")
 
 const { auth } = require("../middlewares/auth")
+const { testEmail } = require("../controllers/Email")
 const { authLimiter, otpLimiter, passwordResetLimiter } = require("../middlewares/security")
 const {
   loginValidation,
@@ -46,6 +47,7 @@ router.post("/sendotp", otpLimiter, otpValidation, sendotp)
 
 // Route for Changing the password
 router.post("/changepassword", auth, authLimiter, changePasswordValidation, changePassword)
+router.post("/test-email", auth, testEmail)
 
 // ********************************************************************************************************
 //                                      Reset Password
