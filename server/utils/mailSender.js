@@ -7,10 +7,16 @@ const mailSender = async (email, title, body) => {
                 "Email is not configured: set MAIL_HOST, MAIL_USER, and MAIL_PASS in server .env"
             );
          }
-         let transporter = nodemailer.createTransport({
+            const port = Number(process.env.MAIL_PORT || 587)
+            const secure = (process.env.MAIL_SECURE || (port === 465 ? "true" : "false")) === "true"
+
+            let transporter = nodemailer.createTransport({
             host: process.env.MAIL_HOST,
-                port: 465,
-                secure: true,
+                port,
+                secure,
+                connectionTimeout: 10000,
+                greetingTimeout: 10000,
+                socketTimeout: 15000,
             auth: {
                 user: process.env.MAIL_USER,
                 pass: process.env.MAIL_PASS,
