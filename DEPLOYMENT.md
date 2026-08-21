@@ -35,7 +35,7 @@ Required backend variables:
 - `API_KEY`
 - `API_SECRET`
 - `RESEND_API_KEY`
-- `EMAIL_FROM=no-reply@skillboom.com` (the `skillboom.com` domain must be verified in Resend)
+- `EMAIL_FROM=no-reply@skillboom.com` (the `skillboom.com` domain must be verified in Resend; local testing may use `onboarding@resend.dev` only for the Resend account email)
 - `FOLDER_NAME`
 - `RAZORPAY_KEY`
 - `RAZORPAY_SECRET`
