@@ -9,6 +9,8 @@ const requiredVariables = [
   "FOLDER_NAME",
   "RAZORPAY_KEY",
   "RAZORPAY_SECRET",
+  "RESEND_API_KEY",
+  "EMAIL_FROM",
 ]
 
 function validateEnvironment() {

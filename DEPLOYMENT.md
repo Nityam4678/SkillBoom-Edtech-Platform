@@ -37,6 +37,8 @@ Required backend variables:
 - `FOLDER_NAME`
 - `RAZORPAY_KEY`
 - `RAZORPAY_SECRET`
+- `RESEND_API_KEY`
+- `EMAIL_FROM`
 
 Do not place backend variables in the frontend hosting project.
 
