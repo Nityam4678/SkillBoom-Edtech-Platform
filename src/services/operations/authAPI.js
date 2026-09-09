@@ -11,7 +11,6 @@ const {
   LOGIN_API,
   REFRESH_API,
   LOGOUT_API,
-  SEND_OTP_API,
 } = endpoints
 
 export function signUp(
@@ -22,7 +21,6 @@ export function signUp(
   password,
   confirmPassword,
   navigate,
-  otp
 ) {
   return async (dispatch) => {
     const toastId = toast.loading("Loading...")
@@ -35,7 +33,6 @@ export function signUp(
         email,
         password,
         confirmPassword,
-        otp,
       })
 
       if (!response.data.success) {
@@ -48,17 +45,6 @@ export function signUp(
     }
     dispatch(setLoading(false))
     toast.dismiss(toastId)
-  }
-}
-
-export function sendOtp(email) {
-  return async () => {
-    try {
-      const response = await apiConnector("POST", SEND_OTP_API, { email })
-      toast.success(response.data.message || "OTP sent")
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Could not send OTP")
-    }
   }
 }
 

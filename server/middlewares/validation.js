@@ -17,7 +17,6 @@ const password = body("password").isString().isLength({ min: 8, max: 128 })
 const confirmPassword = body("confirmPassword")
   .isString()
   .isLength({ min: 8, max: 128 })
-const otp = body("otp").isString().isLength({ min: 6, max: 6 }).isNumeric()
 
 const loginValidation = [email, body("password").isString().notEmpty(), validate]
 
@@ -27,14 +26,11 @@ const signupValidation = [
   email,
   password,
   confirmPassword,
-  otp,
   body("accountType").isIn(["Student", "Instructor"]),
   validate,
 ]
 
 const passwordResetRequestValidation = [email, validate]
-const otpValidation = [email, validate]
-
 const passwordResetValidation = [
   password,
   confirmPassword,
@@ -78,7 +74,6 @@ module.exports = {
   signupValidation,
   passwordResetRequestValidation,
   passwordResetValidation,
-  otpValidation,
   changePasswordValidation,
   contactValidation,
   coursesValidation,

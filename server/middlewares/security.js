@@ -20,12 +20,6 @@ const authLimiter = createLimiter(
   "Too many authentication attempts. Please try again later."
 )
 
-const otpLimiter = createLimiter(
-  15 * 60 * 1000,
-  5,
-  "Too many OTP requests. Please try again later."
-)
-
 const passwordResetLimiter = createLimiter(
   15 * 60 * 1000,
   5,
@@ -52,7 +46,6 @@ const uploadLimiter = createLimiter(
 
 module.exports = {
   authLimiter,
-  otpLimiter,
   passwordResetLimiter,
   contactLimiter,
   paymentLimiter,

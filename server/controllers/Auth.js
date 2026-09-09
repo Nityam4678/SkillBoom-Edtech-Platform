@@ -1,11 +1,8 @@
 const bcrypt = require("bcryptjs")
-const crypto = require("crypto")
 const User = require("../models/User")
 const jwt = require("jsonwebtoken")
 const Profile = require("../models/Profile")
 const AuthSession = require("../models/AuthSession")
-const OTP = require("../models/OTP")
-const { sendEmail } = require("../services/email")
 const {
   refreshCookieName,
   getCookieOptions,
@@ -27,7 +24,6 @@ exports.signup = async (req, res) => {
       email,
       password,
       confirmPassword,
-      otp,
       accountType,
       contactNumber,
     } = req.body
@@ -45,35 +41,6 @@ exports.signup = async (req, res) => {
       })
     }
 
-    if (!otp) {
-      return res.status(400).json({ success: false, message: "OTP is required" })
-    }
-
-    const otpRecord = await OTP.findOne({
-      email,
-      expiresAt: { $gt: new Date() },
-    }).select("+otpHash")
-
-    if (!otpRecord || otpRecord.attempts >= 5) {
-      return res.status(400).json({ success: false, message: "Invalid or expired OTP" })
-    }
-
-    const expected = crypto
-      .createHash("sha256")
-      .update(String(otp))
-      .digest("hex")
-    const isOtpValid = crypto.timingSafeEqual(
-      Buffer.from(expected),
-      Buffer.from(otpRecord.otpHash)
-    )
-
-    if (!isOtpValid) {
-      otpRecord.attempts += 1
-      await otpRecord.save()
-      return res.status(400).json({ success: false, message: "Invalid or expired OTP" })
-    }
-
-    await OTP.deleteOne({ _id: otpRecord._id })
     // Check if password and confirm password match
     if (password !== confirmPassword) {
       return res.status(400).json({
@@ -239,50 +206,6 @@ exports.logout = async (req, res) => {
     return res.status(500).json({ success: false, message: "Could not log out" })
   }
 }
-// Send OTP For Email Verification
-exports.sendotp = async (req, res) => {
-  try {
-    const { email } = req.body
-
-    // Check if user is already present
-    // Find user with provided email
-    const checkUserPresent = await User.findOne({ email })
-    // to be used in case of signup
-
-    // If user found with provided email
-    if (checkUserPresent) {
-      // Return 401 Unauthorized status code with error message
-      return res.status(401).json({
-        success: false,
-        message: `User is Already Registered`,
-      })
-    }
-
-    const otp = String(crypto.randomInt(100000, 1000000))
-    const otpHash = crypto.createHash("sha256").update(otp).digest("hex")
-
-    await OTP.deleteMany({ email })
-    await OTP.create({
-      email,
-      otpHash,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-    })
-
-    await sendEmail({
-      to: email,
-      subject: "Your SkillBoom verification code",
-      text: `Your SkillBoom verification code is ${otp}. It expires in 5 minutes.`,
-    })
-
-    res.status(200).json({
-      success: true,
-      message: `OTP Sent Successfully`,
-    })
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "Could not send OTP" })
-  }
-}
-
 // Controller for Changing Password
 exports.changePassword = async (req, res) => {
   try {

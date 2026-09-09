@@ -8,15 +8,13 @@ const {
   refreshAccessToken,
   logout,
   signup,
-  sendotp,
   changePassword,
 } = require("../controllers/Auth")
 const { auth } = require("../middlewares/auth")
-const { authLimiter, otpLimiter } = require("../middlewares/security")
+const { authLimiter } = require("../middlewares/security")
 const {
   loginValidation,
   signupValidation,
-  otpValidation,
   changePasswordValidation,
 } = require("../middlewares/validation")
 
@@ -33,7 +31,6 @@ router.post("/logout", logout)
 
 // Route for user signup
 router.post("/signup", authLimiter, signupValidation, signup)
-router.post("/sendotp", otpLimiter, otpValidation, sendotp)
 
 // Route for Changing the password
 router.post("/changepassword", auth, authLimiter, changePasswordValidation, changePassword)

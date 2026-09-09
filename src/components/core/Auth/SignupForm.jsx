@@ -4,7 +4,7 @@ import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai"
 import { useDispatch } from "react-redux"
 import { useNavigate } from "react-router-dom"
 
-import { sendOtp, signUp } from "../../../services/operations/authAPI"
+import { signUp } from "../../../services/operations/authAPI"
 import { ACCOUNT_TYPE } from "../../../utils/constants"
 import Tab from "../../common/Tab"
 
@@ -21,13 +21,12 @@ function SignupForm() {
     email: "",
     password: "",
     confirmPassword: "",
-    otp: "",
   })
 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  const { firstName, lastName, email, password, confirmPassword, otp } = formData
+  const { firstName, lastName, email, password, confirmPassword } = formData
 
   // Handle input fields, when some value changes
   const handleOnChange = (e) => {
@@ -54,7 +53,6 @@ function SignupForm() {
         password,
         confirmPassword,
         navigate,
-        otp
       )
     )
   }
@@ -96,31 +94,6 @@ function SignupForm() {
               }}
               className="w-full rounded-[0.5rem] bg-richblack-800 p-[12px] text-richblack-5"
             />
-          </label>
-          <label className="w-full">
-            <p className="mb-1 text-[0.875rem] leading-[1.375rem] text-richblack-5">
-              Email OTP <sup className="text-pink-200">*</sup>
-            </p>
-            <div className="flex gap-x-2">
-              <input
-                required
-                type="text"
-                name="otp"
-                value={otp}
-                onChange={handleOnChange}
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="Enter OTP"
-                className="w-full rounded-[0.5rem] bg-richblack-800 p-[12px] text-richblack-5"
-              />
-              <button
-                type="button"
-                onClick={() => dispatch(sendOtp(email))}
-                className="rounded-[8px] bg-richblack-700 px-3 text-sm text-richblack-5"
-              >
-                Send OTP
-              </button>
-            </div>
           </label>
           <label>
             <p className="mb-1 text-[0.875rem] leading-[1.375rem] text-richblack-5">
